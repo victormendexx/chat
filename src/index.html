@@ -124,35 +124,68 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
-      const message = document.getElementById("messages");
+      const messagesUl = document.getElementById("messages");
       const input = document.getElementById("input");
+      const form = document.getElementById("form");
 
-      // Solicita nome do usuário ao entrar
       let username = "";
+      let currentRoom = "Geral";
 
       while (!username.trim()) {
         username = prompt("Digite seu nome de usuário:");
       }
 
-      // Envia mensagem com o username
-      document.addEventListener("submit", (e) => {
+      socket.emit("register", username);
+
+      // UI: seletor de salas
+      const roomSelector = document.createElement("select");
+      roomSelector.style.margin = "0.5rem";
+      roomSelector.style.padding = "0.3rem";
+      roomSelector.style.borderRadius = "5px";
+      roomSelector.style.border = "1px solid #ccc";
+
+      roomSelector.addEventListener("change", () => {
+        const selectedRoom = roomSelector.value;
+        if (selectedRoom !== currentRoom) {
+          currentRoom = selectedRoom;
+          socket.emit("join-room", currentRoom); // 🟢 entra na nova sala explicitamente
+          clearMessages();
+        }
+      });
+
+      document.body.insertBefore(roomSelector, messagesUl);
+
+      socket.on("room-list", (rooms) => {
+        updateRoomSelector(rooms);
+        socket.emit("join-room", currentRoom); // entra no "Geral"
+      });
+
+      socket.on("new-private-room", (roomName) => {
+        if (![...roomSelector.options].some((o) => o.value === roomName)) {
+          const option = document.createElement("option");
+          option.value = roomName;
+          option.textContent = roomName;
+          roomSelector.appendChild(option);
+        }
+      });
+
+      form.addEventListener("submit", (e) => {
         e.preventDefault();
         if (input.value.trim()) {
           socket.emit("message", {
-            username: username,
+            room: currentRoom,
             message: input.value.trim(),
+            username: username,
           });
           addMessage({ username, message: input.value.trim() }, true);
           input.value = "";
         }
       });
 
-      // Recebe mensagens de outros usuários
       socket.on("message", (data) => {
         addMessage(data, false);
       });
 
-      // Renderiza mensagem no chat
       function addMessage(data, isMine) {
         const li = document.createElement("li");
 
@@ -171,8 +204,25 @@
         li.appendChild(msg);
 
         if (isMine) li.classList.add("my-message");
-        message.appendChild(li);
+        messagesUl.appendChild(li);
+        messagesUl.scrollTop = messagesUl.scrollHeight;
+      }
+
+      function clearMessages() {
+        messagesUl.innerHTML = "";
+      }
+
+      function updateRoomSelector(rooms) {
+        roomSelector.innerHTML = "";
+        rooms.forEach((room) => {
+          const option = document.createElement("option");
+          option.value = room;
+          option.textContent = room;
+          roomSelector.appendChild(option);
+        });
       }
     </script>
+
+
   </body>
 </html>
