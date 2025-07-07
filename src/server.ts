@@ -16,7 +16,9 @@ class App {
   }
 
   listenServer() {
-    this.http.listen(3000, () => console.log("server is running"));
+    this.http.listen(3000, () =>
+      console.log("server is running at: http://localhost:3000")
+    );
   }
 
   listenSocket() {
@@ -24,6 +26,15 @@ class App {
 
     this.io.on("connection", (socket) => {
       socket.on("newUser", (username: string) => {
+        const usernameAlreadyExists = Array.from(users.values()).includes(
+          username
+        );
+
+        if (usernameAlreadyExists) {
+          socket.emit("username-taken");
+          return;
+        }
+
         users.set(socket.id, username);
         socket.join("Geral");
 
@@ -34,7 +45,6 @@ class App {
         for (const [otherId, otherUsername] of userList) {
           if (otherId === socket.id) continue;
 
-          // ✅ Nome determinístico da sala
           const roomName = `privado:${[username, otherUsername]
             .sort()
             .join("-")}`;
@@ -44,13 +54,11 @@ class App {
             otherSocket.emit("new-private-room", roomName);
           }
 
-          // Também envia para o usuário atual
           socket.emit("new-private-room", roomName);
         }
       });
 
       socket.on("join-room", (roomName) => {
-        // Remove socket de todas as salas, exceto da sala default do socket
         for (const room of socket.rooms) {
           if (room !== socket.id) {
             socket.leave(room);

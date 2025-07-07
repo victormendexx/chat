@@ -3,13 +3,12 @@ const messagesUl = document.getElementById("messages");
 const input = document.getElementById("input");
 const roomListUl = document.getElementById("room-list");
 
-let username = "";
 let currentRoom = "Geral";
+let username = "";
 
 while (!username.trim()) {
   username = prompt("Digite seu nome de usuário:");
 }
-
 socket.emit("newUser", username);
 
 // Adiciona sala Geral logo de início
@@ -53,6 +52,11 @@ socket.on("message", (data) => {
 
 socket.on("new-private-room", (roomName) => {
   addRoomToList(roomName);
+});
+
+socket.on("username-taken", () => {
+  alert("Este nome de usuário já está em uso. Escolha outro.");
+  promptUsername();
 });
 
 function addMessage(data, isMine) {
@@ -115,4 +119,13 @@ function addRoomToList(roomName) {
   };
 
   roomListUl.appendChild(li);
+}
+
+function promptUsername() {
+  username = prompt("Digite seu nome de usuário:");
+  if (!username || !username.trim()) {
+    promptUsername(); // força preenchimento
+    return;
+  }
+  socket.emit("newUser", username.trim());
 }
