@@ -32,6 +32,12 @@
     position: relative;
   }
 
+  #messages > li span {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #555;
+  }
+
   .my-message {
     align-self: flex-end;
     background: #dcf8c6;
@@ -126,18 +132,33 @@
         e.preventDefault();
         if (input.value) {
           socket.emit("message", input.value);
-          addMessage(input.value, true); // adiciona localmente
+          addMessage({ id: socket.id, message: input.value }, true);
           input.value = "";
         }
       });
 
-      socket.on("message", (msg) => {
-        addMessage(msg, false); // só mensagens dos outros
+      socket.on("message", (data) => {
+        addMessage(data, false); 
       });
 
-      function addMessage(msg, isMine) {
+      function addMessage(data, isMine) {
         const li = document.createElement("li");
-        li.textContent = msg;
+        
+        const name = document.createElement("span");
+        
+        name.textContent = isMine ? "Você" : data.id.slice(0, 5);
+        name.style.fontSize = "0.75rem";
+        name.style.fontWeight = "bold";
+        name.style.opacity = "0.7";
+        name.style.display = "block";
+        name.style.marginBottom = "2px";
+
+        const msg = document.createElement("div");
+        msg.textContent = data.message;
+
+        li.appendChild(name);
+        li.appendChild(msg);
+
         if (isMine) li.classList.add("my-message");
         message.appendChild(li);
       }
