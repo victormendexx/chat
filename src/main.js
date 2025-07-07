@@ -1,14 +1,20 @@
 const socket = io();
-const message = document.getElementById("messages");
+const messagesUl = document.getElementById("messages");
 const input = document.getElementById("input");
+const roomListUl = document.getElementById("room-list");
 
 let username = "";
+let currentRoom = "Geral";
 
 while (!username.trim()) {
   username = prompt("Digite seu nome de usuário:");
 }
 
 socket.emit("newUser", username);
+
+// Adiciona sala Geral logo de início
+addRoomToList("Geral");
+socket.emit("join-room", "Geral");
 
 socket.on("onlineUsers", (userList) => {
   const container = document.getElementById("online-users");
@@ -20,29 +26,35 @@ socket.on("onlineUsers", (userList) => {
   });
 });
 
-// a partir do momento que ele recebe acesso ao username ele carrega no banco as mensagens antigas com o username conectado
-// lista todas as mensagens antigas
-
-// Envia mensagem com o username
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (input.value.trim()) {
     socket.emit("message", {
+      room: currentRoom,
       username: username,
       message: input.value.trim(),
-      timeStamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
     });
-    addMessage({ username, message: input.value.trim() }, true);
+    addMessage(
+      {
+        username,
+        message: input.value.trim(),
+        timestamp: new Date().toISOString(),
+      },
+      true
+    );
     input.value = "";
   }
 });
 
-// Recebe mensagens de outros usuários
 socket.on("message", (data) => {
   addMessage(data, false);
 });
 
-// Renderiza mensagem no chat
+socket.on("new-private-room", (roomName) => {
+  addRoomToList(roomName);
+});
+
 function addMessage(data, isMine) {
   const li = document.createElement("li");
 
@@ -69,10 +81,9 @@ function addMessage(data, isMine) {
   li.appendChild(time);
 
   if (isMine) li.classList.add("my-message");
-  message.appendChild(li);
+  messagesUl.appendChild(li);
 
-  //bagulho do scroll
-  messages.scrollTop = messages.scrollHeight;
+  messagesUl.scrollTop = messagesUl.scrollHeight;
 }
 
 function formatTime(isoString) {
@@ -80,4 +91,28 @@ function formatTime(isoString) {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+function addRoomToList(roomName) {
+  if (document.querySelector(`li[data-room="${roomName}"]`)) return;
+
+  const li = document.createElement("li");
+  li.textContent = roomName;
+  li.dataset.room = roomName;
+  if (roomName === currentRoom) li.classList.add("active");
+
+  li.onclick = () => {
+    if (roomName === currentRoom) return;
+
+    currentRoom = roomName;
+    document
+      .querySelectorAll("#room-list li")
+      .forEach((li) => li.classList.remove("active"));
+    li.classList.add("active");
+
+    socket.emit("join-room", roomName);
+    messagesUl.innerHTML = "";
+  };
+
+  roomListUl.appendChild(li);
 }

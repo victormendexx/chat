@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Chat</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -12,9 +12,14 @@
       <ul id="online-users"></ul>
     </div>
 
+    <div id="rooms-container">
+      <strong>Salas:</strong>
+      <ul id="room-list"></ul>
+    </div>
+
     <ul id="messages"></ul>
     <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
+      <input id="input" autocomplete="off" /><button>Enviar</button>
     </form>
 
     <script src="/socket.io/socket.io.js"></script>
