@@ -23,14 +23,7 @@ class App {
 
       socket.on("message", (msg) => {
         console.log("chegou mensagem:", msg);
-        const data = {
-          id: socket.id,
-          message: msg,
-        };
-        socket.broadcast.emit("message", {
-          id: socket.id,
-          message: msg,
-        });
+        socket.broadcast.emit("message", msg);
       });
     });
   }
