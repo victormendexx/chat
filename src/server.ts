@@ -23,7 +23,7 @@ class App {
 
       socket.on("message", (msg) => {
         console.log("chegou mensagem:", msg);
-        this.io.emit("message", msg);
+        socket.broadcast.emit("message", msg);
       });
     });
   }
