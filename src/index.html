@@ -131,29 +131,41 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      var socket = io();
+      const socket = io();
       const message = document.getElementById("messages");
       const input = document.getElementById("input");
 
+      // Solicita nome do usuário ao entrar
+      let username = "";
+
+      while (!username.trim()) {
+        username = prompt("Digite seu nome de usuário:");
+      }
+
+      // Envia mensagem com o username
       document.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (input.value) {
-          socket.emit("message", input.value);
-          addMessage({ id: socket.id, message: input.value }, true);
+        if (input.value.trim()) {
+          socket.emit("message", {
+            username: username,
+            message: input.value.trim(),
+          });
+          addMessage({ username, message: input.value.trim() }, true);
           input.value = "";
         }
       });
 
+      // Recebe mensagens de outros usuários
       socket.on("message", (data) => {
-        addMessage(data, false); 
+        addMessage(data, false);
       });
 
+      // Renderiza mensagem no chat
       function addMessage(data, isMine) {
         const li = document.createElement("li");
-        
+
         const name = document.createElement("span");
-        
-        name.textContent = isMine ? "Você" : data.id.slice(0, 5);
+        name.textContent = isMine ? "Você" : data.username || "Desconhecido";
         name.style.fontSize = "0.75rem";
         name.style.fontWeight = "bold";
         name.style.opacity = "0.7";
