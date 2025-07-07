@@ -18,12 +18,24 @@ class App {
     this.http.listen(3000, () => console.log("server is running"));
   }
   listenSocket() {
+    const users = new Map<string, string>();
+
     this.io.on("connection", (socket) => {
       console.log("user connected =>", socket.id);
+
+      socket.on("newUser", (username: string) => {
+        users.set(socket.id, username);
+        this.io.emit("onlineUsers", Array.from(users.values()));
+      });
 
       socket.on("message", (msg) => {
         console.log("chegou mensagem:", msg);
         socket.broadcast.emit("message", msg);
+      });
+
+      socket.on("disconnect", () => {
+        users.delete(socket.id);
+        this.io.emit("onlineUsers", Array.from(users.values()));
       });
     });
   }

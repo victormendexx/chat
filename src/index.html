@@ -104,6 +104,38 @@
     background: #57a05a;
   }
 
+  #online-users-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #66bb6a;
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 10;
+  }
+
+  #online-users {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  #online-users li {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+
   @media (max-width: 600px) {
     #messages > li {
       max-width: 85%;
@@ -123,6 +155,11 @@
     </style>
   </head>
   <body>
+    <div id="online-users-container">
+      <strong>Online:</strong>
+      <ul id="online-users"></ul>
+    </div>
+
     <ul id="messages"></ul>
     <form id="form" action="">
       <input id="input" autocomplete="off" /><button>Send</button>
@@ -140,6 +177,19 @@
       while (!username.trim()) {
         username = prompt("Digite seu nome de usuário:");
       }
+
+      socket.emit("newUser", username);
+
+      //ve quem ta online
+      socket.on("onlineUsers", (userList) => {
+        const container = document.getElementById("online-users");
+        container.innerHTML = ""; 
+        userList.forEach((user) => {
+          const li = document.createElement("li");
+          li.textContent = user;
+          container.appendChild(li);
+        });
+      });
 
       // a partir do momento que ele recebe acesso ao username ele carrega no banco as mensagens antigas com o username conectado
       // lista todas as mensagens antigas
