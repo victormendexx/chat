@@ -42,11 +42,11 @@ class App {
     });
   }
   setupRoutes() {
+    this.app.use(express.static(__dirname));
     this.app.get("/", (req, res) => {
       res.sendFile(__dirname + "/index.html");
     });
   }
 }
-
 const app = new App();
 app.listenServer();
