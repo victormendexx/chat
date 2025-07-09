@@ -1,16 +1,28 @@
 const socket = io();
-const message = document.getElementById("messages");
+const messagesUl = document.getElementById("messages");
 const input = document.getElementById("input");
+const roomSelect = document.getElementById("room-select");
 
+let currentRoom = "Geral";
 let username = "";
+let onlineUsers = [];
 
-while (!username.trim()) {
-  username = prompt("Digite seu nome de usuário:");
+promptUsername();
+
+function promptUsername() {
+  while (!username.trim()) {
+    username = prompt("Digite seu nome de usuário:");
+  }
+  socket.emit("newUser", username.trim());
 }
 
-socket.emit("newUser", username);
+// Inicialmente adiciona sala Geral e entra
+addRoomToDropdown("Geral");
+socket.emit("join-room", "Geral");
+updateRoomHeader("Geral");
 
 socket.on("onlineUsers", (userList) => {
+  onlineUsers = userList;
   const container = document.getElementById("online-users");
   container.innerHTML = "";
   userList.forEach((user) => {
@@ -18,31 +30,50 @@ socket.on("onlineUsers", (userList) => {
     li.textContent = user;
     container.appendChild(li);
   });
+
+  updateRoomHeader(currentRoom);
 });
 
-// a partir do momento que ele recebe acesso ao username ele carrega no banco as mensagens antigas com o username conectado
-// lista todas as mensagens antigas
-
-// Envia mensagem com o username
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (input.value.trim()) {
-    socket.emit("message", {
+    const msg = {
+      room: currentRoom,
       username: username,
       message: input.value.trim(),
-      timeStamp: new Date().toISOString(),
-    });
-    addMessage({ username, message: input.value.trim() }, true);
+      timestamp: new Date().toISOString(),
+    };
+    socket.emit("message", msg);
+    addMessage(msg, true);
     input.value = "";
   }
 });
 
-// Recebe mensagens de outros usuários
 socket.on("message", (data) => {
   addMessage(data, false);
 });
 
-// Renderiza mensagem no chat
+socket.on("new-private-room", (roomName) => {
+  addRoomToDropdown(roomName);
+});
+
+socket.on("username-taken", () => {
+  alert("Este nome de usuário já está em uso. Escolha outro.");
+  username = "";
+  promptUsername();
+});
+
+// Quando troca de sala via dropdown
+roomSelect.addEventListener("change", () => {
+  const selectedRoom = roomSelect.value;
+  if (selectedRoom === currentRoom) return;
+
+  currentRoom = selectedRoom;
+  socket.emit("join-room", selectedRoom);
+  messagesUl.innerHTML = "";
+  updateRoomHeader(selectedRoom);
+});
+
 function addMessage(data, isMine) {
   const li = document.createElement("li");
 
@@ -69,10 +100,9 @@ function addMessage(data, isMine) {
   li.appendChild(time);
 
   if (isMine) li.classList.add("my-message");
-  message.appendChild(li);
+  messagesUl.appendChild(li);
 
-  //bagulho do scroll
-  messages.scrollTop = messages.scrollHeight;
+  messagesUl.scrollTop = messagesUl.scrollHeight;
 }
 
 function formatTime(isoString) {
@@ -80,4 +110,41 @@ function formatTime(isoString) {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+function addRoomToDropdown(roomName) {
+  if (roomSelect.querySelector(`option[value="${roomName}"]`)) return;
+
+  let displayName = roomName;
+  if (roomName.startsWith("privado:")) {
+    const [, userA, userB] = roomName.split(/[:\-]/);
+    displayName = userA === username ? userB : userA;
+  }
+
+  const option = document.createElement("option");
+  option.value = roomName;
+  option.textContent = displayName;
+  roomSelect.appendChild(option);
+}
+
+function updateRoomHeader(roomName) {
+  const roomNameElement = document.getElementById("room-name");
+  const roomStatusElement = document.getElementById("room-status");
+
+  roomSelect.value = roomName;
+
+  let displayName = roomName;
+  if (roomName.startsWith("privado:")) {
+    const [, userA, userB] = roomName.split(/[:\-]/);
+    displayName = userA === username ? userB : userA;
+
+    const isOnline = onlineUsers.includes(displayName);
+    roomStatusElement.textContent = isOnline ? "🟢" : "🔴";
+    roomStatusElement.className = isOnline ? "online" : "offline";
+  } else {
+    roomStatusElement.textContent = "";
+    roomStatusElement.className = "";
+  }
+
+  roomNameElement.textContent = displayName;
 }

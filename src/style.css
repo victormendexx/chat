@@ -26,6 +26,7 @@ body {
   font-size: 1rem;
   line-height: 1.4;
   position: relative;
+  min-width: 10%;
 }
 
 #messages > li span {
@@ -40,6 +41,7 @@ body {
   color: #333;
   border-bottom-right-radius: 4px;
   text-align: left;
+  min-width: 10%;
 }
 
 #messages > li:not(.my-message) {
@@ -52,7 +54,7 @@ body {
 }
 
 #messages > li:first-child {
-  margin-top: 40px;
+  margin-top: 8.5rem;
 }
 
 #messages > li:last-child {
@@ -103,7 +105,7 @@ body {
 
 #online-users-container {
   position: fixed;
-  top: 0;
+  top: 3.75rem;
   left: 0;
   right: 0;
   background: #66bb6a;
@@ -132,6 +134,69 @@ body {
   font-weight: 500;
 }
 
+#rooms-container {
+  display: none; /* ocultado, já que agora usamos dropdown */
+}
+
+/* 🔥 HEADER atualizado com dropdown 🔥 */
+#room-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Centraliza o título no meio absoluto */
+#header-div-1 {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Dropdown na direita */
+#header-div-2 {
+  margin-left: auto;
+}
+
+#room-name {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+#room-status {
+  font-size: 0.9rem;
+}
+
+#room-select {
+  font-size: 1rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+/* Cores visuais para status online/offline */
+.online {
+  color: green;
+}
+
+.offline {
+  color: red;
+}
+
+/* Responsivo */
 @media (max-width: 600px) {
   #messages > li {
     max-width: 85%;
@@ -139,7 +204,7 @@ body {
   }
 
   #messages > li:first-child {
-    margin-top: 180px;
+    margin-top: 195px;
   }
 
   #form {
@@ -148,5 +213,15 @@ body {
 
   #form > button {
     width: auto;
+  }
+
+  #room-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  #room-select {
+    width: 100%;
   }
 }

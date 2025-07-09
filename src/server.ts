@@ -16,23 +16,72 @@ class App {
   }
 
   listenServer() {
-    this.http.listen(3000, () => console.log("server is running"));
+    this.http.listen(3000, () =>
+      console.log("server is running at: http://localhost:3000")
+    );
   }
 
   listenSocket() {
     const users = new Map<string, string>();
+    const createdRooms = new Set<string>();
 
     this.io.on("connection", (socket) => {
-      console.log("user connected =>", socket.id);
-
       socket.on("newUser", (username: string) => {
+        const usernameAlreadyExists = Array.from(users.values()).includes(
+          username
+        );
+
+        if (usernameAlreadyExists) {
+          socket.emit("username-taken");
+          return;
+        }
+
         users.set(socket.id, username);
+        socket.join("Geral");
+
+        const userList = Array.from(users.entries());
+
         this.io.emit("onlineUsers", Array.from(users.values()));
+
+        for (const [otherId, otherUsername] of userList) {
+          if (otherId === socket.id) continue;
+
+          const roomName = `privado:${[username, otherUsername]
+            .sort()
+            .join("-")}`;
+
+          const otherSocket = this.io.sockets.sockets.get(otherId);
+          if (otherSocket) {
+            otherSocket.emit("new-private-room", roomName);
+          }
+
+          socket.emit("new-private-room", roomName);
+        }
       });
 
-      socket.on("message", (msg) => {
-        console.log("chegou mensagem:", msg);
-        socket.broadcast.emit("message", msg);
+      socket.on("join-room", (roomName) => {
+        for (const room of socket.rooms) {
+          if (room !== socket.id) {
+            socket.leave(room);
+          }
+        }
+
+        socket.join(roomName);
+      });
+
+      socket.on("message", ({ room, message, username }) => {
+        socket.to(room).emit("message", { message, username });
+      });
+
+      socket.on("init-private-room", ({ user1, user2 }) => {
+        const roomName = `privado:${[user1, user2].sort().join("-")}`;
+
+        if (!createdRooms.has(roomName)) {
+          createdRooms.add(roomName);
+          console.log(`🔧 Criando nova sala: ${roomName}`);
+        }
+
+        socket.join(roomName);
       });
 
       socket.on("disconnect", () => {
@@ -41,6 +90,7 @@ class App {
       });
     });
   }
+
   setupRoutes() {
     this.app.use(express.static(__dirname));
     this.app.get("/", (req, res) => {
@@ -48,5 +98,6 @@ class App {
     });
   }
 }
+
 const app = new App();
 app.listenServer();
