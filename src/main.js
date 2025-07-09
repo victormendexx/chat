@@ -1,78 +1,97 @@
 const socket = io();
 const messagesUl = document.getElementById("messages");
 const input = document.getElementById("input");
-const roomSelect = document.getElementById("room-select");
+const form = document.getElementById("form");
 
-let currentRoom = "Geral";
 let username = "";
-let onlineUsers = [];
+let currentRoom = "Geral";
+const roomSelect = document.getElementById("room-select");
+const roomName = document.getElementById("room-name");
+const roomStatus = document.getElementById("room-status");
 
-promptUsername();
+const onlineUsers = new Set(); // Para verificar se um usuário está online
+const privateRooms = new Map(); // roomName => otherUser
 
-function promptUsername() {
-  while (!username.trim()) {
-    username = prompt("Digite seu nome de usuário:");
-  }
-  socket.emit("newUser", username.trim());
+// Prompt de login
+while (!username.trim()) {
+  username = prompt("Digite seu nome de usuário:");
 }
+username = username.trim().toLowerCase();
+socket.emit("newUser", username);
 
-// Inicialmente adiciona sala Geral e entra
-addRoomToDropdown("Geral");
-socket.emit("join-room", "Geral");
-updateRoomHeader("Geral");
-
+// Atualiza a lista de usuários online
 socket.on("onlineUsers", (userList) => {
-  onlineUsers = userList;
-  const container = document.getElementById("online-users");
-  container.innerHTML = "";
+  onlineUsers.clear();
   userList.forEach((user) => {
-    const li = document.createElement("li");
-    li.textContent = user;
-    container.appendChild(li);
+    onlineUsers.add(user.trim().toLowerCase()); // 🔧 NORMALIZA
   });
 
-  updateRoomHeader(currentRoom);
+  updateRoomStatus(); // Agora vai funcionar certo
 });
 
-document.addEventListener("submit", (e) => {
-  e.preventDefault();
-  if (input.value.trim()) {
-    const msg = {
-      room: currentRoom,
-      username: username,
-      message: input.value.trim(),
-      timestamp: new Date().toISOString(),
-    };
-    socket.emit("message", msg);
-    addMessage(msg, true);
-    input.value = "";
-  }
-});
-
+// Recebe mensagem
 socket.on("message", (data) => {
   addMessage(data, false);
 });
 
+// Nova sala privada detectada
 socket.on("new-private-room", (roomName) => {
-  addRoomToDropdown(roomName);
+  const otherUser = getOtherUserFromRoom(roomName);
+
+  if (otherUser && !privateRooms.has(roomName)) {
+    privateRooms.set(roomName, otherUser);
+    addRoomToSelect(roomName, otherUser);
+
+    // ✅ AQUI: atualiza o header se o room recebido for o atual
+    if (currentRoom === roomName) {
+      updateRoomStatus();
+    }
+  }
 });
 
-socket.on("username-taken", () => {
-  alert("Este nome de usuário já está em uso. Escolha outro.");
-  username = "";
-  promptUsername();
+// Formulário de envio de mensagem
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (input.value.trim()) {
+    socket.emit("message", {
+      username,
+      message: input.value.trim(),
+      room: currentRoom,
+      timeStamp: new Date().toISOString(),
+    });
+    addMessage({ username, message: input.value.trim() }, true);
+    input.value = "";
+  }
 });
 
-// Quando troca de sala via dropdown
+// Troca de sala ao selecionar no dropdown
 roomSelect.addEventListener("change", () => {
-  const selectedRoom = roomSelect.value;
-  if (selectedRoom === currentRoom) return;
+  const roomNameSelected = roomSelect.value;
+  if (!roomNameSelected || roomNameSelected === currentRoom) return;
 
-  currentRoom = selectedRoom;
-  socket.emit("join-room", selectedRoom);
+  currentRoom = roomNameSelected;
+  socket.emit("join-room", currentRoom);
+
+  const label = getRoomLabel(currentRoom);
+  roomName.textContent = label;
+
+  updateRoomStatus();
+
   messagesUl.innerHTML = "";
-  updateRoomHeader(selectedRoom);
+  roomSelect.selectedIndex = 0;
 });
+
+// Inicializa com "Geral"
+addRoomToSelect("Geral", "Geral");
+
+function addRoomToSelect(roomName, displayLabel) {
+  if (roomSelect.querySelector(`option[value="${roomName}"]`)) return;
+
+  const option = document.createElement("option");
+  option.value = roomName;
+  option.textContent = displayLabel;
+  roomSelect.appendChild(option);
+}
 
 function addMessage(data, isMine) {
   const li = document.createElement("li");
@@ -112,39 +131,42 @@ function formatTime(isoString) {
   return `${hours}:${minutes}`;
 }
 
-function addRoomToDropdown(roomName) {
-  if (roomSelect.querySelector(`option[value="${roomName}"]`)) return;
+function getOtherUserFromRoom(roomName) {
+  if (!roomName.startsWith("privado:")) return null;
 
-  let displayName = roomName;
-  if (roomName.startsWith("privado:")) {
-    const [, userA, userB] = roomName.split(/[:\-]/);
-    displayName = userA === username ? userB : userA;
-  }
+  const users = roomName
+    .replace("privado:", "")
+    .split("-")
+    .map((u) => u.trim().toLowerCase());
 
-  const option = document.createElement("option");
-  option.value = roomName;
-  option.textContent = displayName;
-  roomSelect.appendChild(option);
+  return users.find((u) => u !== username);
 }
 
-function updateRoomHeader(roomName) {
-  const roomNameElement = document.getElementById("room-name");
-  const roomStatusElement = document.getElementById("room-status");
+function getRoomLabel(roomName) {
+  if (roomName === "Geral") return "Geral";
+  const otherUser =
+    privateRooms.get(roomName) || getOtherUserFromRoom(roomName);
+  return otherUser || roomName;
+}
 
-  roomSelect.value = roomName;
-
-  let displayName = roomName;
-  if (roomName.startsWith("privado:")) {
-    const [, userA, userB] = roomName.split(/[:\-]/);
-    displayName = userA === username ? userB : userA;
-
-    const isOnline = onlineUsers.includes(displayName);
-    roomStatusElement.textContent = isOnline ? "🟢" : "🔴";
-    roomStatusElement.className = isOnline ? "online" : "offline";
-  } else {
-    roomStatusElement.textContent = "";
-    roomStatusElement.className = "";
+function updateRoomStatus() {
+  if (currentRoom === "Geral") {
+    roomStatus.textContent = "";
+    return;
   }
 
-  roomNameElement.textContent = displayName;
+  const otherUser =
+    privateRooms.get(currentRoom) || getOtherUserFromRoom(currentRoom);
+
+  if (!otherUser) {
+    roomStatus.textContent = "";
+    return;
+  }
+
+  const isOnline = onlineUsers.has(otherUser);
+
+  console.log();
+
+  roomStatus.textContent = isOnline ? "🟢" : "🔴";
+  roomStatus.style.color = isOnline ? "green" : "gray";
 }

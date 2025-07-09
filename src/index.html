@@ -8,24 +8,22 @@
   </head>
   <body>
     <div id="room-header">
-      <div id="header-div-1">
-        <h2 id="room-name">Geral</h2>
-        <span id="room-status"></span>
-      </div>
       <div id="header-div-2">
-        <select id="room-select"></select>
+        <select id="room-select">
+          <option disabled selected hidden>Chats:</option>
+        </select>
+      </div>
+
+      <div id="header-div-1">
+        <span id="room-status"></span>
+        <h2 id="room-name">Geral</h2>
       </div>
     </div>
 
-    <div id="online-users-container">
+    <!-- <div id="online-users-container">
       <strong>Online:</strong>
       <ul id="online-users"></ul>
-    </div>
-
-    <div id="rooms-container">
-      <strong>Salas:</strong>
-      <ul id="room-list"></ul>
-    </div>
+    </div> -->
 
     <ul id="messages"></ul>
     <form id="form" action="">
