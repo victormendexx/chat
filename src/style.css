@@ -135,57 +135,38 @@ body {
 }
 
 #rooms-container {
-  position: fixed;
-  top: 6.25rem;
-  left: 0;
-  right: 0;
-  background: #f0f0f0;
-  padding: 0.5rem 1rem;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  z-index: 9;
-  border-bottom: 1px solid #ccc;
+  display: none; /* ocultado, já que agora usamos dropdown */
 }
 
-#room-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  gap: 0.5rem;
-  flex-row: wrap;
-}
-
-#room-list li {
-  background: #ddd;
-  padding: 0.3rem 0.7rem;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#room-list li.active {
-  background: #66bb6a;
-  color: white;
-}
-
+/* 🔥 HEADER atualizado com dropdown 🔥 */
 #room-header {
-  text-align: center;
-  background: #ffffff;
-  font-family: "Segoe UI", sans-serif;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 15; /* maior que os outros */
+  z-index: 15;
   display: flex;
-  justify-content: center; /* Centraliza horizontalmente */
-  align-items: center; /* Centraliza verticalmente */
-  gap: 0.5rem; /* Espaço entre nome e status */
-  padding: 1rem 0;
-  border-bottom: 1px solid #ddd;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Centraliza o título no meio absoluto */
+#header-div-1 {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Dropdown na direita */
+#header-div-2 {
+  margin-left: auto;
 }
 
 #room-name {
@@ -194,12 +175,28 @@ body {
 }
 
 #room-status {
-  display: block;
-  font-size: 0.85rem;
-  margin-top: 4px;
-  color: #666;
+  font-size: 0.9rem;
 }
 
+#room-select {
+  font-size: 1rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+/* Cores visuais para status online/offline */
+.online {
+  color: green;
+}
+
+.offline {
+  color: red;
+}
+
+/* Responsivo */
 @media (max-width: 600px) {
   #messages > li {
     max-width: 85%;
@@ -216,5 +213,15 @@ body {
 
   #form > button {
     width: auto;
+  }
+
+  #room-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  #room-select {
+    width: 100%;
   }
 }

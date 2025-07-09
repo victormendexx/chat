@@ -1,21 +1,28 @@
 const socket = io();
 const messagesUl = document.getElementById("messages");
 const input = document.getElementById("input");
-const roomListUl = document.getElementById("room-list");
+const roomSelect = document.getElementById("room-select");
 
 let currentRoom = "Geral";
 let username = "";
+let onlineUsers = [];
 
-while (!username.trim()) {
-  username = prompt("Digite seu nome de usuário:");
+promptUsername();
+
+function promptUsername() {
+  while (!username.trim()) {
+    username = prompt("Digite seu nome de usuário:");
+  }
+  socket.emit("newUser", username.trim());
 }
-socket.emit("newUser", username);
 
-// Adiciona sala Geral logo de início
-addRoomToList("Geral");
+// Inicialmente adiciona sala Geral e entra
+addRoomToDropdown("Geral");
 socket.emit("join-room", "Geral");
+updateRoomHeader("Geral");
 
 socket.on("onlineUsers", (userList) => {
+  onlineUsers = userList;
   const container = document.getElementById("online-users");
   container.innerHTML = "";
   userList.forEach((user) => {
@@ -23,25 +30,21 @@ socket.on("onlineUsers", (userList) => {
     li.textContent = user;
     container.appendChild(li);
   });
+
+  updateRoomHeader(currentRoom);
 });
 
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (input.value.trim()) {
-    socket.emit("message", {
+    const msg = {
       room: currentRoom,
       username: username,
       message: input.value.trim(),
       timestamp: new Date().toISOString(),
-    });
-    addMessage(
-      {
-        username,
-        message: input.value.trim(),
-        timestamp: new Date().toISOString(),
-      },
-      true
-    );
+    };
+    socket.emit("message", msg);
+    addMessage(msg, true);
     input.value = "";
   }
 });
@@ -51,12 +54,24 @@ socket.on("message", (data) => {
 });
 
 socket.on("new-private-room", (roomName) => {
-  addRoomToList(roomName);
+  addRoomToDropdown(roomName);
 });
 
 socket.on("username-taken", () => {
   alert("Este nome de usuário já está em uso. Escolha outro.");
+  username = "";
   promptUsername();
+});
+
+// Quando troca de sala via dropdown
+roomSelect.addEventListener("change", () => {
+  const selectedRoom = roomSelect.value;
+  if (selectedRoom === currentRoom) return;
+
+  currentRoom = selectedRoom;
+  socket.emit("join-room", selectedRoom);
+  messagesUl.innerHTML = "";
+  updateRoomHeader(selectedRoom);
 });
 
 function addMessage(data, isMine) {
@@ -97,73 +112,39 @@ function formatTime(isoString) {
   return `${hours}:${minutes}`;
 }
 
-function addRoomToList(roomName) {
-  if (document.querySelector(`li[data-room="${roomName}"]`)) return;
+function addRoomToDropdown(roomName) {
+  if (roomSelect.querySelector(`option[value="${roomName}"]`)) return;
 
-  const li = document.createElement("li");
-  li.textContent = roomName;
-  li.dataset.room = roomName;
-  if (roomName === currentRoom) li.classList.add("active");
-
-  li.onclick = () => {
-    if (roomName === currentRoom) return;
-
-    currentRoom = roomName;
-
-    // Atualiza visualmente a seleção
-    document.querySelectorAll("#room-list li").forEach((el) => {
-      el.classList.remove("active");
-    });
-    li.classList.add("active");
-
-    // Atualiza o header (apenas visual!)
-    updateRoomHeader(roomName);
-
-    // Envia evento ao socket para entrar na sala (só aqui)
-    if (roomName.startsWith("privado:")) {
-      const [, userA, userB] = roomName.match(/^privado:(.+)-(.+)$/);
-      socket.emit("init-private-room", { user1: userA, user2: userB });
-    } else {
-      socket.emit("join-room", roomName);
-    }
-
-    // Limpa as mensagens
-    messagesUl.innerHTML = "";
-  };
-
-  roomListUl.appendChild(li);
-}
-
-function promptUsername() {
-  username = prompt("Digite seu nome de usuário:");
-  if (!username || !username.trim()) {
-    promptUsername(); // força preenchimento
-    return;
+  let displayName = roomName;
+  if (roomName.startsWith("privado:")) {
+    const [, userA, userB] = roomName.split(/[:\-]/);
+    displayName = userA === username ? userB : userA;
   }
-  socket.emit("newUser", username.trim());
+
+  const option = document.createElement("option");
+  option.value = roomName;
+  option.textContent = displayName;
+  roomSelect.appendChild(option);
 }
 
 function updateRoomHeader(roomName) {
-  const nameElem = document.getElementById("room-name");
-  const statusElem = document.getElementById("room-status");
+  const roomNameElement = document.getElementById("room-name");
+  const roomStatusElement = document.getElementById("room-status");
 
-  nameElem.textContent = roomName;
+  roomSelect.value = roomName;
 
+  let displayName = roomName;
   if (roomName.startsWith("privado:")) {
-    const [, userA, userB] = roomName.match(/^privado:(.+)-(.+)$/);
-    const otherUser = username === userA ? userB : userA;
+    const [, userA, userB] = roomName.split(/[:\-]/);
+    displayName = userA === username ? userB : userA;
 
-    // Verifica se o outro usuário está online
-    const isOnline = Array.from(
-      document.querySelectorAll("#online-users li")
-    ).some((li) => li.textContent === otherUser);
-
-    statusElem.textContent = isOnline
-      ? `🟢 ${otherUser} está online`
-      : `🔴 ${otherUser} está offline`;
-    statusElem.style.color = isOnline ? "green" : "red";
+    const isOnline = onlineUsers.includes(displayName);
+    roomStatusElement.textContent = isOnline ? "🟢" : "🔴";
+    roomStatusElement.className = isOnline ? "online" : "offline";
   } else {
-    statusElem.textContent = "Você está no grupo Geral";
-    statusElem.style.color = "#666";
+    roomStatusElement.textContent = "";
+    roomStatusElement.className = "";
   }
+
+  roomNameElement.textContent = displayName;
 }
