@@ -73,8 +73,38 @@ class App {
       });
 
       socket.on("disconnect", () => {
+        const disconnectedUsername = users.get(socket.id);
         users.delete(socket.id);
+
+        // Atualiza a lista de usuários online
         this.io.emit("onlineUsers", Array.from(users.values()));
+
+        if (!disconnectedUsername) return;
+
+        // Gera nomes das salas privadas que envolvem o usuário desconectado
+        const roomsToRemove = Array.from(users.values()).map(
+          (otherUsername) =>
+            `privado:${[disconnectedUsername, otherUsername].sort().join("-")}`
+        );
+
+        // Para cada usuário restante
+        for (const [otherId, otherUsername] of users.entries()) {
+          const otherSocket = this.io.sockets.sockets.get(otherId);
+
+          if (otherSocket) {
+            // Envia para remover as salas da UI do outro usuário
+            otherSocket.emit("remove-private-rooms", roomsToRemove);
+
+            // Força saída das salas afetadas
+            for (const roomName of roomsToRemove) {
+              if (otherSocket.rooms.has(roomName)) {
+                otherSocket.leave(roomName);
+                otherSocket.join("Geral");
+                otherSocket.emit("force-join-geral");
+              }
+            }
+          }
+        }
       });
     });
   }

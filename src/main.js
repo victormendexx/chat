@@ -15,6 +15,32 @@ socket.emit("newUser", username);
 addRoomToList("Geral");
 socket.emit("join-room", "Geral");
 
+// Remove salas privadas da listagem e troca pra Geral se necessário
+socket.on("remove-private-rooms", (roomsToRemove) => {
+  roomsToRemove.forEach((roomName) => {
+    const li = document.querySelector(`li[data-room="${roomName}"]`);
+    if (li) li.remove();
+
+    // Se estiver na sala que foi removida, volta para Geral
+    if (currentRoom === roomName) {
+      currentRoom = "Geral";
+      document
+        .querySelectorAll("#room-list li")
+        .forEach((li) => li.classList.remove("active"));
+
+      const geralLi = document.querySelector('li[data-room="Geral"]');
+      if (geralLi) geralLi.classList.add("active");
+
+      messagesUl.innerHTML = "";
+    }
+  });
+});
+
+// Força troca de sala para Geral (sem duplicar lógica)
+socket.on("force-join-geral", () => {
+  socket.emit("join-room", "Geral");
+});
+
 socket.on("onlineUsers", (userList) => {
   const container = document.getElementById("online-users");
   container.innerHTML = "";
@@ -103,6 +129,7 @@ function addRoomToList(roomName) {
   const li = document.createElement("li");
   li.textContent = roomName;
   li.dataset.room = roomName;
+
   if (roomName === currentRoom) li.classList.add("active");
 
   li.onclick = () => {
@@ -118,7 +145,7 @@ function addRoomToList(roomName) {
     messagesUl.innerHTML = "";
   };
 
-  roomListUl.appendChild(li);
+  document.getElementById("room-list").appendChild(li);
 }
 
 function promptUsername() {
