@@ -1,6 +1,8 @@
 import express, { Application } from "express";
 import http from "http";
 import { Server } from "socket.io";
+import { getGeralMessages, sendMessage } from "./dynamo";
+import { MessageDTO } from "./message";
 
 class App {
   private app: Application;
@@ -26,10 +28,13 @@ class App {
     const createdRooms = new Set<string>();
 
     this.io.on("connection", (socket) => {
-      socket.on("newUser", (username: string) => {
+      socket.on("newUser", async (username: string) => {
         const usernameAlreadyExists = Array.from(users.values()).includes(
           username
         );
+
+        const messagesGeral = await getGeralMessages();
+        socket.emit("load-geral-messages", messagesGeral);
 
         if (usernameAlreadyExists) {
           socket.emit("username-taken");
@@ -69,8 +74,11 @@ class App {
         socket.join(roomName);
       });
 
-      socket.on("message", ({ room, message, username }) => {
-        socket.to(room).emit("message", { message, username });
+      socket.on("message", async ({ room, message, username }) => {
+        let responseCode = await sendMessage({room, text: message, sender: username});
+        if (responseCode === 200){
+          socket.to(room).emit("message", { message, username });
+        }
       });
 
       socket.on("init-private-room", ({ user1, user2 }) => {

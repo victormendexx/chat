@@ -36,6 +36,7 @@ socket.on("onlineUsers", (userList) => {
 
 document.addEventListener("submit", (e) => {
   e.preventDefault();
+  console.log('CLICADOOOOOOOO')
   if (input.value.trim()) {
     const msg = {
       room: currentRoom,
@@ -43,6 +44,9 @@ document.addEventListener("submit", (e) => {
       message: input.value.trim(),
       timestamp: new Date().toISOString(),
     };
+
+    console.log(`ENVIANDO MSG NO ${currentRoom}`);
+
     socket.emit("message", msg);
     addMessage(msg, true);
     input.value = "";
@@ -50,6 +54,7 @@ document.addEventListener("submit", (e) => {
 });
 
 socket.on("message", (data) => {
+  console.log('main');
   addMessage(data, false);
 });
 
@@ -148,3 +153,17 @@ function updateRoomHeader(roomName) {
 
   roomNameElement.textContent = displayName;
 }
+
+socket.on("load-geral-messages", (mensagens) => {
+  mensagens.forEach((msg) => {
+    addMessage(
+      {
+        username: msg.sender,
+        message: msg.msg,
+        timestamp: msg.timestamp * 1000
+      },
+      false
+    );
+  });
+});
+
