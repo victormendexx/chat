@@ -54,7 +54,7 @@ body {
 }
 
 #messages > li:first-child {
-  margin-top: 80px;
+  margin-top: 8.5rem;
 }
 
 #messages > li:last-child {
@@ -105,7 +105,7 @@ body {
 
 #online-users-container {
   position: fixed;
-  top: 0;
+  top: 3.75rem;
   left: 0;
   right: 0;
   background: #66bb6a;
@@ -136,7 +136,7 @@ body {
 
 #rooms-container {
   position: fixed;
-  top: 2.5rem;
+  top: 6.25rem;
   left: 0;
   right: 0;
   background: #f0f0f0;
@@ -145,7 +145,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  z-index: 10;
+  z-index: 9;
   border-bottom: 1px solid #ccc;
 }
 
@@ -169,6 +169,35 @@ body {
 #room-list li.active {
   background: #66bb6a;
   color: white;
+}
+
+#room-header {
+  text-align: center;
+  background: #ffffff;
+  font-family: "Segoe UI", sans-serif;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15; /* maior que os outros */
+  display: flex;
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center; /* Centraliza verticalmente */
+  gap: 0.5rem; /* Espaço entre nome e status */
+  padding: 1rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+#room-name {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+#room-status {
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  color: #666;
 }
 
 @media (max-width: 600px) {

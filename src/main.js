@@ -15,32 +15,6 @@ socket.emit("newUser", username);
 addRoomToList("Geral");
 socket.emit("join-room", "Geral");
 
-// Remove salas privadas da listagem e troca pra Geral se necessário
-socket.on("remove-private-rooms", (roomsToRemove) => {
-  roomsToRemove.forEach((roomName) => {
-    const li = document.querySelector(`li[data-room="${roomName}"]`);
-    if (li) li.remove();
-
-    // Se estiver na sala que foi removida, volta para Geral
-    if (currentRoom === roomName) {
-      currentRoom = "Geral";
-      document
-        .querySelectorAll("#room-list li")
-        .forEach((li) => li.classList.remove("active"));
-
-      const geralLi = document.querySelector('li[data-room="Geral"]');
-      if (geralLi) geralLi.classList.add("active");
-
-      messagesUl.innerHTML = "";
-    }
-  });
-});
-
-// Força troca de sala para Geral (sem duplicar lógica)
-socket.on("force-join-geral", () => {
-  socket.emit("join-room", "Geral");
-});
-
 socket.on("onlineUsers", (userList) => {
   const container = document.getElementById("online-users");
   container.innerHTML = "";
@@ -129,23 +103,35 @@ function addRoomToList(roomName) {
   const li = document.createElement("li");
   li.textContent = roomName;
   li.dataset.room = roomName;
-
   if (roomName === currentRoom) li.classList.add("active");
 
   li.onclick = () => {
     if (roomName === currentRoom) return;
 
     currentRoom = roomName;
-    document
-      .querySelectorAll("#room-list li")
-      .forEach((li) => li.classList.remove("active"));
+
+    // Atualiza visualmente a seleção
+    document.querySelectorAll("#room-list li").forEach((el) => {
+      el.classList.remove("active");
+    });
     li.classList.add("active");
 
-    socket.emit("join-room", roomName);
+    // Atualiza o header (apenas visual!)
+    updateRoomHeader(roomName);
+
+    // Envia evento ao socket para entrar na sala (só aqui)
+    if (roomName.startsWith("privado:")) {
+      const [, userA, userB] = roomName.match(/^privado:(.+)-(.+)$/);
+      socket.emit("init-private-room", { user1: userA, user2: userB });
+    } else {
+      socket.emit("join-room", roomName);
+    }
+
+    // Limpa as mensagens
     messagesUl.innerHTML = "";
   };
 
-  document.getElementById("room-list").appendChild(li);
+  roomListUl.appendChild(li);
 }
 
 function promptUsername() {
@@ -155,4 +141,29 @@ function promptUsername() {
     return;
   }
   socket.emit("newUser", username.trim());
+}
+
+function updateRoomHeader(roomName) {
+  const nameElem = document.getElementById("room-name");
+  const statusElem = document.getElementById("room-status");
+
+  nameElem.textContent = roomName;
+
+  if (roomName.startsWith("privado:")) {
+    const [, userA, userB] = roomName.match(/^privado:(.+)-(.+)$/);
+    const otherUser = username === userA ? userB : userA;
+
+    // Verifica se o outro usuário está online
+    const isOnline = Array.from(
+      document.querySelectorAll("#online-users li")
+    ).some((li) => li.textContent === otherUser);
+
+    statusElem.textContent = isOnline
+      ? `🟢 ${otherUser} está online`
+      : `🔴 ${otherUser} está offline`;
+    statusElem.style.color = isOnline ? "green" : "red";
+  } else {
+    statusElem.textContent = "Você está no grupo Geral";
+    statusElem.style.color = "#666";
+  }
 }

@@ -23,6 +23,7 @@ class App {
 
   listenSocket() {
     const users = new Map<string, string>();
+    const createdRooms = new Set<string>();
 
     this.io.on("connection", (socket) => {
       socket.on("newUser", (username: string) => {
@@ -72,39 +73,20 @@ class App {
         socket.to(room).emit("message", { message, username });
       });
 
-      socket.on("disconnect", () => {
-        const disconnectedUsername = users.get(socket.id);
-        users.delete(socket.id);
+      socket.on("init-private-room", ({ user1, user2 }) => {
+        const roomName = `privado:${[user1, user2].sort().join("-")}`;
 
-        // Atualiza a lista de usuários online
-        this.io.emit("onlineUsers", Array.from(users.values()));
-
-        if (!disconnectedUsername) return;
-
-        // Gera nomes das salas privadas que envolvem o usuário desconectado
-        const roomsToRemove = Array.from(users.values()).map(
-          (otherUsername) =>
-            `privado:${[disconnectedUsername, otherUsername].sort().join("-")}`
-        );
-
-        // Para cada usuário restante
-        for (const [otherId, otherUsername] of users.entries()) {
-          const otherSocket = this.io.sockets.sockets.get(otherId);
-
-          if (otherSocket) {
-            // Envia para remover as salas da UI do outro usuário
-            otherSocket.emit("remove-private-rooms", roomsToRemove);
-
-            // Força saída das salas afetadas
-            for (const roomName of roomsToRemove) {
-              if (otherSocket.rooms.has(roomName)) {
-                otherSocket.leave(roomName);
-                otherSocket.join("Geral");
-                otherSocket.emit("force-join-geral");
-              }
-            }
-          }
+        if (!createdRooms.has(roomName)) {
+          createdRooms.add(roomName);
+          console.log(`🔧 Criando nova sala: ${roomName}`);
         }
+
+        socket.join(roomName);
+      });
+
+      socket.on("disconnect", () => {
+        users.delete(socket.id);
+        this.io.emit("onlineUsers", Array.from(users.values()));
       });
     });
   }
