@@ -1,5 +1,5 @@
 import { Socket, Server } from "socket.io";
-import { getGeralMessages, sendMessage } from "./dynamo";
+import { getMessagesByRoom, sendMessage } from "./dynamo";
 
 const users = new Map<string, string>(); // socket.id => username
 const createdRooms = new Set<string>(); // nomes únicos das salas privadas
@@ -14,8 +14,10 @@ export function registerSocketHandlers(io: Server, socket: Socket) {
       return;
     }
 
-    const messagesGeral = await getGeralMessages();
-    socket.emit("load-geral-messages", messagesGeral);
+    socket.on("load-room-messages", async (roomName) => {
+      const messages = await getMessagesByRoom(roomName);
+      socket.emit("load-room-messages", { room: roomName, messages });
+    });
 
     users.set(socket.id, username);
     socket.join("Geral");

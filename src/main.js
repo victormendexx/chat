@@ -19,6 +19,13 @@ while (!username.trim()) {
 username = username.trim().toLowerCase();
 socket.emit("newUser", username);
 
+socket.on("username-taken", () => {
+  alert("⚠️ Nome de usuário já está em uso. Escolha outro.");
+  location.reload();
+});
+
+socket.emit("load-room-messages", currentRoom);
+
 // Atualiza a lista de usuários online
 socket.on("onlineUsers", (userList) => {
   onlineUsers.clear();
@@ -26,13 +33,46 @@ socket.on("onlineUsers", (userList) => {
     onlineUsers.add(user.trim().toLowerCase()); // 🔧 NORMALIZA
   });
 
-  updateRoomStatus(); // Agora vai funcionar certo
+  updateRoomStatus();
 });
 
-// Recebe mensagem
+// Recebe mensagem em tempo real
 socket.on("message", (data) => {
-  console.log('main');
   addMessage(data, false);
+});
+
+// Mensagens da sala Geral
+socket.on("load-geral-messages", (mensagens) => {
+  if (currentRoom !== "Geral") return;
+
+  messagesUl.innerHTML = "";
+  mensagens.forEach((msg) => {
+    addMessage(
+      {
+        username: msg.sender,
+        message: msg.msg,
+        timestamp: msg.timestamp * 1000,
+      },
+      msg.sender === username
+    );
+  });
+});
+
+// Mensagens de qualquer sala
+socket.on("load-room-messages", ({ room, messages }) => {
+  if (room !== currentRoom) return;
+
+  messagesUl.innerHTML = "";
+  messages.forEach((msg) => {
+    addMessage(
+      {
+        username: msg.sender,
+        message: msg.msg,
+        timestamp: msg.timestamp * 1000,
+      },
+      msg.sender === username
+    );
+  });
 });
 
 // Nova sala privada detectada
@@ -43,14 +83,13 @@ socket.on("new-private-room", (roomName) => {
     privateRooms.set(roomName, otherUser);
     addRoomToSelect(roomName, otherUser);
 
-    // ✅ AQUI: atualiza o header se o room recebido for o atual
     if (currentRoom === roomName) {
       updateRoomStatus();
     }
   }
 });
 
-// Formulário de envio de mensagem
+// Formulário de envio
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   if (input.value.trim()) {
@@ -65,7 +104,7 @@ form.addEventListener("submit", (e) => {
   }
 });
 
-// Troca de sala ao selecionar no dropdown
+// Troca de sala
 roomSelect.addEventListener("change", () => {
   const roomNameSelected = roomSelect.value;
   if (!roomNameSelected || roomNameSelected === currentRoom) return;
@@ -80,9 +119,12 @@ roomSelect.addEventListener("change", () => {
 
   messagesUl.innerHTML = "";
   roomSelect.selectedIndex = 0;
+
+  // 👉 Busca mensagens da nova sala
+  socket.emit("load-room-messages", currentRoom);
 });
 
-// Inicializa com "Geral"
+// Inicializa dropdown com sala Geral
 addRoomToSelect("Geral", "Geral");
 
 function addRoomToSelect(roomName, displayLabel) {
@@ -125,8 +167,9 @@ function addMessage(data, isMine) {
   messagesUl.scrollTop = messagesUl.scrollHeight;
 }
 
-function formatTime(isoString) {
-  const date = new Date(isoString);
+function formatTime(timestamp) {
+  const date =
+    typeof timestamp === "number" ? new Date(timestamp) : new Date(timestamp);
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
@@ -165,23 +208,6 @@ function updateRoomStatus() {
   }
 
   const isOnline = onlineUsers.has(otherUser);
-
-  console.log();
-
   roomStatus.textContent = isOnline ? "🟢" : "🔴";
   roomStatus.style.color = isOnline ? "green" : "gray";
 }
-
-socket.on("load-geral-messages", (mensagens) => {
-  mensagens.forEach((msg) => {
-    addMessage(
-      {
-        username: msg.sender,
-        message: msg.msg,
-        timestamp: msg.timestamp * 1000
-      },
-      false
-    );
-  });
-});
-

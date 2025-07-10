@@ -28,14 +28,14 @@ export const sendMessage = async (message: MessageDTO) => {
   return response.$metadata.httpStatusCode;
 };
 
-export const getGeralMessages = async () => {
+export const getMessagesByRoom = async (room: string) => {
   const command = new QueryCommand({
     TableName: "mensagens",
     KeyConditionExpression: "room = :room",
     ExpressionAttributeValues: {
-      ":room": "Geral",
+      ":room": room,
     },
-    ScanIndexForward: true,
+    ScanIndexForward: true, // true = ordem crescente (antigas para novas)
   });
 
   const response = await docClient.send(command);
