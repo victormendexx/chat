@@ -54,11 +54,11 @@ body {
 }
 
 #messages > li:first-child {
-  margin-top: 8.5rem;
+  margin-top: 4.5rem;
 }
 
 #messages > li:last-child {
-  margin-bottom: 20px;
+  margin-bottom: 1.25rem;
 }
 
 #form {
@@ -150,8 +150,9 @@ body {
   justify-content: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: #f0f0f0;
-  border-bottom: 1px solid #ccc;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 2.75rem;
 }
 
 /* Centraliza o título no meio absoluto */
@@ -161,12 +162,13 @@ body {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
 /* Dropdown na direita */
 #header-div-2 {
-  margin-left: auto;
+  margin-right: auto;
 }
 
 #room-name {
@@ -176,6 +178,7 @@ body {
 
 #room-status {
   font-size: 0.9rem;
+  align-self: center;
 }
 
 #room-select {
@@ -204,7 +207,11 @@ body {
   }
 
   #messages > li:first-child {
-    margin-top: 195px;
+    margin-top: 11.5rem;
+  }
+
+  #messages > li:last-child {
+    margin-bottom: -1rem;
   }
 
   #form {

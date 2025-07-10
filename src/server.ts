@@ -19,16 +19,18 @@ class App {
 
   listenServer() {
     this.http.listen(3000, () =>
-      console.log("server is running at: http://localhost:3000")
+      console.log("✅ Server running at: http://localhost:3000")
     );
   }
 
   listenSocket() {
-    const users = new Map<string, string>();
-    const createdRooms = new Set<string>();
+    const users = new Map<string, string>(); // socket.id => username
+    const createdRooms = new Set<string>(); // nomes únicos das salas privadas
 
     this.io.on("connection", (socket) => {
-      socket.on("newUser", async (username: string) => {
+      socket.on("newUser", async (usernameRaw: string) => {
+        const username = usernameRaw.trim().toLowerCase();
+
         const usernameAlreadyExists = Array.from(users.values()).includes(
           username
         );
@@ -44,10 +46,13 @@ class App {
         users.set(socket.id, username);
         socket.join("Geral");
 
-        const userList = Array.from(users.entries());
+        console.log(`🟢 Usuário conectado: ${username} (${socket.id})`);
 
+        // Atualiza todos com os usuários online
         this.io.emit("onlineUsers", Array.from(users.values()));
 
+        // Envia todas as salas privadas possíveis (mas ainda não conectadas)
+        const userList = Array.from(users.entries());
         for (const [otherId, otherUsername] of userList) {
           if (otherId === socket.id) continue;
 
@@ -82,17 +87,29 @@ class App {
       });
 
       socket.on("init-private-room", ({ user1, user2 }) => {
-        const roomName = `privado:${[user1, user2].sort().join("-")}`;
+        const normalized1 = user1.trim().toLowerCase();
+        const normalized2 = user2.trim().toLowerCase();
+
+        const roomName = `privado:${[normalized1, normalized2]
+          .sort()
+          .join("-")}`;
 
         if (!createdRooms.has(roomName)) {
           createdRooms.add(roomName);
-          console.log(`🔧 Criando nova sala: ${roomName}`);
+          console.log(`🛠️ Sala privada criada: ${roomName}`);
         }
 
         socket.join(roomName);
       });
 
+      socket.on("message", ({ room, message, username }) => {
+        console.log(`💬 ${username} → [${room}]: ${message}`);
+        socket.to(room).emit("message", { message, username });
+      });
+
       socket.on("disconnect", () => {
+        const disconnectedUsername = users.get(socket.id);
+        console.log(`🔴 Usuário desconectado: ${disconnectedUsername}`);
         users.delete(socket.id);
         this.io.emit("onlineUsers", Array.from(users.values()));
       });
