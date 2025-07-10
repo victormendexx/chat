@@ -34,6 +34,22 @@ socket.on("onlineUsers", (userList) => {
   });
 
   updateRoomStatus();
+
+  Array.from(roomSelect.options).forEach((option) => {
+    const room = option.value;
+
+    if (room === "Geral") {
+      option.textContent = "⚪️ Geral"; // ❌ Sem emoji
+      return;
+    }
+
+    const otherUser = getOtherUserFromRoom(room);
+    if (!otherUser) return;
+
+    const isOnline = onlineUsers.has(otherUser);
+    const statusEmoji = isOnline ? "🟢" : "🔴";
+    option.textContent = `${statusEmoji} ${otherUser}`;
+  });
 });
 
 // Recebe mensagem em tempo real
@@ -130,9 +146,20 @@ addRoomToSelect("Geral", "Geral");
 function addRoomToSelect(roomName, displayLabel) {
   if (roomSelect.querySelector(`option[value="${roomName}"]`)) return;
 
+  let label = displayLabel;
+
+  if (roomName !== "Geral") {
+    const isOnline = onlineUsers.has(displayLabel.trim().toLowerCase());
+    const statusEmoji = isOnline ? "🟢" : "🔴";
+    label = `${statusEmoji} ${displayLabel}`;
+  } else {
+    const statusEmoji = "⚪️";
+    label = `${statusEmoji} ${displayLabel}`;
+  }
+
   const option = document.createElement("option");
   option.value = roomName;
-  option.textContent = displayLabel;
+  option.textContent = label;
   roomSelect.appendChild(option);
 }
 
